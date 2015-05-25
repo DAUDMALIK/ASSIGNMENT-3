@@ -1,0 +1,196 @@
+// Simpletron Simulator. 
+#include <iostream> 
+#include <iomanip> 
+#include <string> 
+using namespace std;
+enum Commands {READ = 10, WRITE, LOAD = 20, STORE, ADD = 30, SUBTRACT,DIVIDE, MULTIPLY, BRANCH = 40, BRANCHNEG, BRANCHZERO, HALT};
+// prototypes 
+void load(int * const);
+void execute(int * const, int * const, int * const, int * const,int * const, int * const);
+void dump(const int * const, int, int, int, int, int);
+bool correctword(int);
+void print(string, int, int, bool);
+const int SIZE = 100;
+
+const long inputwordstop = -99999;
+int main()
+{   int memory[SIZE] = { 0 };
+	auto accumulator = 0;
+	auto instructionCounter = 0;
+	auto operand = 0;
+	auto operationCode = 0;
+	auto instructionRegister = 0;
+	load(memory);
+	execute(memory, &accumulator, &instructionCounter,&instructionRegister, &operationCode, &operand);
+	dump(memory, accumulator, instructionCounter, instructionRegister,operationCode, operand);
+} // end main 
+// load instructions 
+void load(int * const loadMemory)
+{	long instruction;
+	int i = 0; // indexing variable 
+	cout << "***	Welcome to Simpletron	***\n"
+		<< "*** Please enter your program one instruction ***\n"
+		<< "*** (or data word) at a time. I will type the ***\n"
+		<< "*** location number and a question mark (?).  ***\n"
+		<< "*** You then type the word for that location. ***\n"
+		<< "*** Type the inputwordstop -99999 to stop entering ***\n"
+		<< "*** your program.	***\n"
+		<< "00 ? ";
+	cin >> instruction;
+	while (instruction != inputwordstop)
+	{	if (!correctword(instruction))
+		cout << "Number out of range. Please enter again.\n";
+		else
+			loadMemory[i++] = instruction;
+		// function setfill sets the padding character for unused 
+		// field widths. 
+		cout << setw(2) << setfill('0') << i << " ? ";
+		cin >> instruction;
+	} // end while 
+} // end function load 
+// carry out the commands 
+void execute(int * const memory, int * const acumulator, int * const intrncounter,int * const instrnregister, 
+	int * const operationcodep,int * const operandp)
+{	bool fatal = false;
+	int var;
+	string messages[] = { "Accumulator overflow		***","Atvart	to divide by	zero	***","Invalid	opcode detected	***" };
+	string termString ="\n*** Simpletron execution abnormally terminated ***";
+	string fatalString = "*** FATAL ERROR: ";
+	cout << "\n************START SIMPLETRON EXECUTION************\n\n";
+	do	{*instrnregister = memory[*intrncounter];
+             *operationcodep = *instrnregister / 100;
+             *operandp = *instrnregister % 100;
+		// switch to determine appropriate action 
+		switch (*operationcodep)
+		{		case READ:
+			cout << "Enter an integer: ";
+			cin >> var;
+			memory[*operandp] = var;
+			++(*intrncounter);
+			break;
+		case WRITE:
+			cout << "Contents of " << setw(2) << setfill('0')
+				<< *operandp << ": " << memory[*operandp] << '\n';
+			++(*intrncounter);
+			break;
+		case LOAD:
+			*acumulator = memory[*operandp];
+			++(*intrncounter);
+			break;
+		case STORE:
+			memory[*operandp] = *acumulator;
+			++(*intrncounter);
+			break;
+		case ADD:
+			var = *acumulator + memory[*operandp];
+			if (!correctword(var))
+			{cout << fatalString << messages[0] << termString << '\n';
+				fatal = true;}
+			else
+			{	*acumulator = var;
+				++(*intrncounter);}
+			break;
+		case SUBTRACT:
+			var = *acumulator - memory[*operandp];
+			if (!correctword(var))
+			{
+				cout << fatalString << messages[0] << termString << '\n';
+				fatal = true;
+			}
+			else
+			{			*acumulator = var;
+				++(*intrncounter);}
+			break;
+		case DIVIDE:
+			if (memory[*operandp] == 0)
+			{cout << fatalString << messages[1] << termString << '\n';
+				fatal = true;}
+			else
+			{	*acumulator /= memory[*operandp];
+				++(*intrncounter);			}
+			break;
+		case MULTIPLY:
+			var = *acumulator * memory[*operandp];
+			if (!correctword(var))
+			{cout << fatalString << messages[0] << termString << '\n';
+				fatal = true;}
+			else
+			{*acumulator = var;
+				++(*intrncounter);}
+			break;
+		case BRANCH:
+			*intrncounter = *operandp;
+			break;
+		case BRANCHNEG:
+			*acumulator < 0 ? *intrncounter = *operandp : ++(*intrncounter);
+			break;
+		case BRANCHZERO:
+			*acumulator == 0 ? *intrncounter = *operandp : ++(*intrncounter);
+			break;
+		case HALT:
+			cout << "*** Simpletron execution terminated ***\n";
+			break;
+		default:0;
+			cout << fatalString << messages[2] << termString << '\n';
+			fatal = true;
+			break;
+		} // end switch 
+} while (*operationcodep != HALT && !fatal);
+
+
+	cout << "\n*************END SIMPLETRON EXECUTION*************\n";
+
+} // end function execute 
+
+// print out name and content of each register and memory 
+
+void dump(const int * const memory, int accumulator,int instructionCounter, int instructionRegister, int operationCode,int operand)
+
+{   cout << "\nREGISTERS:\n";
+	print("accumulator", 5, accumulator, true);
+	print("instructionCounter", 2, instructionCounter, false);
+	print("instructionRegister", 5, instructionRegister, true);
+	print("operationCode", 2, operationCode, false);
+	print("operand", 2, operand, false);
+	cout << "\n\nMEMORY:\n";
+	cout << setfill(' ') << setw(3) << ' ';
+	// print header 
+	for (int i = 0; i <= 9; ++i)
+		cout << setw(5) << i << ' ';
+	for (int i = 0; i < SIZE; ++i)
+	{
+		if (i % 10 == 0)
+			cout << '\n' << setw(2) << i << ' ';
+		cout << internal << setw(5) << setfill('0')
+			<< memory[i] << ' ' << internal;
+	} // end for 
+	cout << endl;
+} // end function dump 
+
+// validate 
+bool correctword(int input)
+{
+	return ((input >= -9999 && input <= 9999) || input == -99999);
+} // end function correctword 
+
+// display result 
+void print(string label, int width, int value, bool sign)
+{
+	// format of "accumulator", etc. 
+	cout << setfill(' ') << left << setw(20)
+		<< label << ' ';
+	// is a +/- sign needed? 
+	if (sign)
+		cout << showpos << internal;
+	// setup for displaying accumulator value, etc. 
+	cout << left << setfill('0');
+	// determine the field widths and display value 
+	if (width == 5)
+		cout << setw(width) << value << '\n';
+	else  // width is 2 
+		cout << setfill(' ') << setw(3) << ' ' << setw(width)
+		<< setfill('0') << value << '\n';
+	// disable sign if it was set 
+	if (sign)
+		cout << showpos << internal;
+} // end function print 
